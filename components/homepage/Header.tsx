@@ -22,7 +22,7 @@ export function Header() {
         </Link>
 
         {/* Hamburger Menu Button - Mobile Only */}
-        <button
+        {/*<button
           onClick={() => setIsMenuOpen(!isMenuOpen)}
           className="flex h-10 w-10 flex-col items-center justify-center gap-1.5 rounded-lg transition-colors hover:bg-gray-100 md:hidden"
           aria-label="Toggle menu"
@@ -30,7 +30,7 @@ export function Header() {
           <span className="h-0.5 w-6 bg-[#1a1a1a] transition-all"></span>
           <span className="h-0.5 w-6 bg-[#1a1a1a] transition-all"></span>
           <span className="h-0.5 w-6 bg-[#1a1a1a] transition-all"></span>
-        </button>
+        </button>*/}
       </div>
 
       {/* Mobile Menu Dropdown - Empty for now */}
