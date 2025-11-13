@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import type { ReactNode } from "react";
 
 import { SCAN_STORAGE_KEY } from "@/lib/constants";
 import {
@@ -20,7 +21,7 @@ interface StatusCard {
   title: string;
   description: string;
   bgColor: string;
-  icon: JSX.Element;
+  icon: ReactNode;
 }
 
 const STATUS_CARDS: StatusCard[] = [
