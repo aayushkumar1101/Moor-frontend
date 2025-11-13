@@ -29,13 +29,13 @@ export function FooterSection() {
           {/* Right side - Links */}
           <div className="flex flex-col items-center gap-3 sm:flex-row sm:gap-6">
             <Link
-              href="#privacy"
+              href="/privacy-policy"
               className="text-xs text-[#4c4c6d] hover:text-[#1a1a1a] transition-colors sm:text-sm"
             >
               Privacy
             </Link>
             <Link
-              href="#terms"
+              href="/user-agreement"
               className="text-xs text-[#4c4c6d] hover:text-[#1a1a1a] transition-colors sm:text-sm"
             >
               Terms & Conditions

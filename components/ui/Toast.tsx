@@ -93,7 +93,7 @@ export default function Toast({
   };
 
   return (
-    <div className="fixed top-4 right-4 z-50 animate-slide-down-fade max-w-md">
+    <div className="fixed bottom-4 right-4 z-50 animate-slide-down-fade max-w-md">
       <div
         className={`flex items-start gap-3 ${currentStyle.bg} border-l-4 ${currentStyle.border} rounded-lg p-4 shadow-lg`}
       >

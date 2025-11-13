@@ -8,6 +8,7 @@ import { motion } from "framer-motion";
 import { InputError } from "@/components/ui/ErrorMessage";
 import Toast from "@/components/ui/Toast";
 import useFormValidation from "@/hooks/useFormValidation";
+import { SCAN_STORAGE_KEY } from "@/lib/constants";
 
 const fadeUp = {
   initial: { opacity: 0, y: 24 },
@@ -17,10 +18,13 @@ const fadeUp = {
 export function HeroSection() {
   const router = useRouter();
   const [url, setUrl] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
+  const [toastType, setToastType] = useState<"error" | "success">("error");
 
   const { validate, clearError, getError } = useFormValidation();
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "");
 
   const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -44,8 +48,11 @@ export function HeroSection() {
     }
   };
 
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (isSubmitting) {
+      return;
+    }
 
     const isValid = validate("url", url, {
       required: true,
@@ -55,12 +62,66 @@ export function HeroSection() {
 
     if (!isValid) {
       setToastMessage("Please enter a valid website URL");
+      setToastType("error");
       setShowToast(true);
       return;
     }
 
-    if (url.trim()) {
-      router.push(`/scan?url=${encodeURIComponent(url)}`);
+    if (!API_BASE_URL) {
+      setToastMessage("API base URL is not configured. Please set NEXT_PUBLIC_API_BASE_URL.");
+      setToastType("error");
+      setShowToast(true);
+      return;
+    }
+
+    const trimmed = url.trim();
+    const formattedUrl = trimmed.startsWith("http://") || trimmed.startsWith("https://") ? trimmed : `https://${trimmed}`;
+
+    try {
+      setIsSubmitting(true);
+      const response = await fetch(`${API_BASE_URL}/api/analyze`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          url: formattedUrl,
+          deep_scan: true,
+          enable_headless: true,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data?.detail || data?.message || "Failed to start analysis. Please try again.");
+      }
+
+      if (typeof window !== "undefined") {
+        const payload = {
+          ...data,
+          url: formattedUrl,
+          saved_at: new Date().toISOString(),
+        };
+        localStorage.setItem(SCAN_STORAGE_KEY, JSON.stringify(payload));
+      }
+
+      setToastMessage("Scan started successfully.");
+      setToastType("success");
+      setShowToast(true);
+
+      router.push(`/scan?url=${encodeURIComponent(formattedUrl)}`);
+    } catch (error) {
+      console.error("Error starting analysis:", error);
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Something went wrong while starting the analysis. Please try again.";
+      setToastMessage(message);
+      setToastType("error");
+      setShowToast(true);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -68,7 +129,7 @@ export function HeroSection() {
     <>
       <Toast
         message={toastMessage}
-        type="error"
+        type={toastType}
         show={showToast}
         onClose={() => setShowToast(false)}
       />
@@ -102,8 +163,9 @@ export function HeroSection() {
                         type="text"
                         value={url}
                         onChange={handleUrlChange}
+                        disabled={isSubmitting}
                         placeholder="Enter a webpage URL"
-                        className={`h-12 w-full rounded-lg border bg-white pl-4 pr-12 text-sm text-neutral-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 transition-all duration-300 ${
+                        className={`h-12 w-full rounded-lg border bg-white pl-4 pr-12 text-sm text-neutral-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 transition-all duration-300 disabled:cursor-not-allowed disabled:opacity-70 ${
                           getError("url")
                             ? "border-red-500 focus:border-red-500 focus:ring-red-500/50"
                             : "border-gray-300 focus:border-[#00a7e6] focus:ring-[#00a7e6]/50"
@@ -111,18 +173,42 @@ export function HeroSection() {
                       />
                       <button
                         type="submit"
-                        className="absolute right-2 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-md bg-gray-200 text-gray-600 transition-all hover:bg-gray-300"
+                        disabled={isSubmitting}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-md bg-gray-200 text-gray-600 transition-all hover:bg-gray-300 disabled:cursor-not-allowed disabled:bg-gray-300"
                         aria-label="Submit"
                       >
-                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                          <path
-                            d="M2 8H14M14 8L8 2M14 8L8 14"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                        </svg>
+                        {isSubmitting ? (
+                          <svg
+                            className="h-4 w-4 animate-spin text-gray-500"
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                          >
+                            <circle
+                              className="opacity-25"
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              stroke="currentColor"
+                              strokeWidth="4"
+                            />
+                            <path
+                              className="opacity-75"
+                              fill="currentColor"
+                              d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                            />
+                          </svg>
+                        ) : (
+                          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                            <path
+                              d="M2 8H14M14 8L8 2M14 8L8 14"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          </svg>
+                        )}
                       </button>
                     </div>
 
@@ -131,8 +217,9 @@ export function HeroSection() {
                         type="text"
                         value={url}
                         onChange={handleUrlChange}
+                        disabled={isSubmitting}
                         placeholder="Enter a webpage URL"
-                        className={`h-14 flex-1 rounded-lg border bg-white px-6 text-base text-neutral-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 transition-all duration-300 ${
+                        className={`h-14 flex-1 rounded-lg border bg-white px-6 text-base text-neutral-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 transition-all duration-300 disabled:cursor-not-allowed disabled:opacity-70 ${
                           getError("url")
                             ? "border-red-500 focus:border-red-500 focus:ring-red-500/50"
                             : "border-[#26262c] focus:border-[#00a7e6] focus:ring-[#00a7e6]/50"
@@ -140,9 +227,10 @@ export function HeroSection() {
                       />
                       <button
                         type="submit"
-                        className="h-14 whitespace-nowrap rounded-lg bg-[#00a7e6] px-5 text-xs font-bold uppercase tracking-[1.8px] text-white transition-colors hover:bg-[#0096d1]"
+                        disabled={isSubmitting}
+                        className="h-14 whitespace-nowrap rounded-lg bg-[#00a7e6] px-5 text-xs font-bold uppercase tracking-[1.8px] text-white transition-colors hover:bg-[#0096d1] disabled:cursor-not-allowed disabled:bg-[#00a7e6]/60"
                       >
-                        SCAN NOW
+                        {isSubmitting ? "SCANNING..." : "SCAN NOW"}
                       </button>
                     </div>
 
